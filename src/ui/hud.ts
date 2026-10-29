@@ -11,6 +11,9 @@ export interface HudHandlers {
   sail(): void;
   restart(): void;
   endIsland(): void;
+  menu(): void;
+  photo(): void;
+  toggleMute(): boolean;
 }
 
 const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] => {
@@ -40,6 +43,7 @@ export class Hud {
   private tidePanel = el('div', 'panel tide');
   private banner = el('div', 'banner hidden');
   private bannerTimer = 0;
+  private muteBtn!: HTMLButtonElement;
   private lastHandKey = '';
   private lastModalKey = '';
 
@@ -59,7 +63,18 @@ export class Hud {
     bottom.append(this.hint, this.hand, this.endBtn);
     this.tidePanel.append(el('div', 'tide-title', 'Tide'), this.tidePips, this.tideText);
     for (let i = 0; i < TIDE.maxSteps; i++) this.tidePips.appendChild(el('span', 'pip'));
-    this.root.append(top, this.tidePanel, this.banner, bottom, this.modal);
+    const toolbar = el('div', 'toolbar');
+    const tool = (label: string, title: string, fn: (b: HTMLButtonElement) => void): HTMLButtonElement => {
+      const b = el('button', 'tool', label);
+      b.title = title;
+      b.addEventListener('click', () => fn(b));
+      toolbar.appendChild(b);
+      return b;
+    };
+    tool('Menu', 'Main menu', () => this.h.menu());
+    tool('Photo', 'Photo mode (P)', () => this.h.photo());
+    this.muteBtn = tool('Sound', 'Toggle sound (M)', () => this.setMuted(this.h.toggleMute()));
+    this.root.append(top, this.tidePanel, toolbar, this.banner, bottom, this.modal);
     parent.appendChild(this.root);
 
     this.hand.addEventListener('click', (e) => {
@@ -74,6 +89,10 @@ export class Hud {
       if (a === 'sail') this.h.sail();
       if (a === 'restart') this.h.restart();
     });
+  }
+
+  setMuted(m: boolean): void {
+    this.muteBtn.textContent = m ? 'Sound off' : 'Sound on';
   }
 
   /** Brief banner when the sea rises. */

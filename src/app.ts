@@ -2,8 +2,8 @@
 import * as THREE from 'three';
 import { BUILDING_IDS, BUILDINGS, type BuildingId } from './data/buildings';
 import { palette } from './data/palette';
-import { Game } from './core/game';
-import { REASON_TEXT } from './core/placement';
+import { Game, newRunState } from './core/game';
+import { REASON_TEXT, validatePlacement } from './core/placement';
 import { Input } from './input/input';
 import { CameraRig } from './render/cameraRig';
 import { BuildingLayer } from './render/buildingLayer';
@@ -17,7 +17,22 @@ import { raycastGround } from './world/raycast';
 import { Shoals } from './world/shoals';
 import { createWater, type Water } from './world/water';
 import { Hud } from './ui/hud';
-import { clearRun, saveRun } from './save';
+import { clearRun, loadRun, saveRun } from './save';
+import { Sound } from './audio/audio';
+import { Puffs } from './render/puffs';
+import { Menu } from './ui/menu';
+
+export interface BenchResult {
+  buildings: number;
+  frames: number;
+  avgMs: number;
+  p95Ms: number;
+  cpuAvgMs: number;
+  cpuP95Ms: number;
+  fps: number;
+  drawCalls: number;
+  triangles: number;
+}
 
 export interface AppOptions {
   /** Disable edge panning and expose hooks (Playwright). */
@@ -47,10 +62,18 @@ export class App {
   private raycaster = new THREE.Raycaster();
   private ndc = new THREE.Vector2();
   private frameTimes: number[] = [];
+  private lastFrame = 0;
+  /** Main-thread time spent in each frame (update + render submission). */
+  private cpuTimes: number[] = [];
   private shimmer = createShimmerUniforms();
   /** Sea level as drawn; lags the game's level while the tide tween runs. */
   private displaySea = 0;
   private tween: { from: number; to: number; t: number; trees: number[] } | null = null;
+  readonly sound = new Sound();
+  private puffs = new Puffs();
+  private menu: Menu;
+  private photoHint: HTMLDivElement;
+  photo = false;
 
   constructor(private container: HTMLElement, public game: Game, private opts: AppOptions) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
@@ -76,19 +99,42 @@ export class App {
     this.rig.edgePan = !opts.test;
 
     this.water = createWater();
-    this.scene.add(this.water.mesh, this.buildings.group, this.ghost.group);
+    this.scene.add(this.water.mesh, this.buildings.group, this.ghost.group, this.puffs.mesh);
 
     this.labels = new Labels(container);
     this.hud = new Hud(container, {
       select: (t) => this.select(t),
       choose: (i) => this.choose(i),
       sail: () => this.sail(),
-      restart: () => this.restart(),
+      restart: () => this.openMenu(),
       endIsland: () => {
         this.game.endIsland();
         this.afterAction();
       },
+      menu: () => this.openMenu(),
+      photo: () => this.setPhoto(true),
+      toggleMute: () => this.toggleMute(),
     });
+    this.hud.setMuted(this.sound.muted);
+    this.menu = new Menu(container, {
+      continueRun: () => {
+        this.sound.unlock();
+        this.menu.hide();
+      },
+      start: (seed) => {
+        this.sound.unlock();
+        this.newRun(seed);
+        this.menu.hide();
+      },
+      toggleMute: () => this.toggleMute(),
+    }, this.sound.muted);
+    this.photoHint = document.createElement('div');
+    this.photoHint.className = 'photo-hint hidden';
+    this.photoHint.textContent = 'Photo mode · drag, WASD, Q/E and wheel to frame · H hides this · P or Esc to return';
+    container.appendChild(this.photoHint);
+    // Any interaction can start audio (browsers need a gesture).
+    window.addEventListener('pointerdown', () => this.sound.unlock());
+    window.addEventListener('keydown', () => this.sound.unlock());
 
     this.input.onPointerMove(() => this.updateHover());
     this.input.onClick(() => this.tryPlace());
@@ -101,7 +147,13 @@ export class App {
         this.ghost.rot += Math.PI / 4;
         this.dirtyPreview = true;
       }
-      if (a === 'cancel') this.select(null);
+      if (a === 'cancel') {
+        if (this.photo) this.setPhoto(false);
+        else this.select(null);
+      }
+      if (a === 'photo' && !this.menu.visible) this.setPhoto(!this.photo);
+      if (a === 'mute') this.toggleMute();
+      if (a === 'hideHint' && this.photo) this.photoHint.classList.toggle('hidden');
     });
     window.addEventListener('resize', () => this.resize());
 
@@ -191,7 +243,7 @@ export class App {
   private refreshPreview(): void {
     this.dirtyPreview = false;
     const g = this.game;
-    if (!this.selected || !this.hover || !g.canPlace(this.selected)) {
+    if (this.photo || !this.selected || !this.hover || !g.canPlace(this.selected)) {
       this.ghost.hide();
       this.labels.clearPreview();
       this.hud.setHint(this.selected || g.state.status !== 'playing' ? '' : 'Pick a building from your hand');
@@ -217,6 +269,7 @@ export class App {
   }
 
   private tryPlace(): void {
+    if (this.photo || this.menu.visible) return;
     this.updateHover();
     if (!this.selected || !this.hover) return;
     this.placeAt(this.selected, this.hover.x, this.hover.z);
@@ -230,7 +283,11 @@ export class App {
     const t = g.world.terrain;
     this.buildings.add(res.building, t.heightAt(res.building.x, res.building.z));
     for (const id of res.treesRemoved) this.props?.removeTree(id);
-    this.labels.burst(res.score.total, new THREE.Vector3(res.building.x, t.heightAt(res.building.x, res.building.z) + 1.8, res.building.z));
+    const ground = new THREE.Vector3(res.building.x, t.heightAt(res.building.x, res.building.z), res.building.z);
+    this.labels.burst(res.score.total, ground.clone().setY(ground.y + 1.8));
+    this.puffs.burst(ground, palette.dust, 12);
+    this.sound.plink(res.score.total);
+    if (res.thresholdsCrossed) this.sound.chime();
     if (res.tide) this.startTide(res.tide);
     this.afterAction();
     return true;
@@ -240,10 +297,14 @@ export class App {
   private startTide(tide: TideResult): void {
     this.tween = { from: this.displaySea, to: tide.seaLevel, t: 0, trees: tide.treesFlooded };
     const t = this.game.world.terrain;
-    for (const b of tide.sunk) {
+    tide.sunk.forEach((b, i) => {
       this.buildings.sink(b.id, TIDE.tweenSeconds * 1.2);
       this.labels.burst(-BUILDINGS[b.type].sinkPenalty, new THREE.Vector3(b.x, t.heightAt(b.x, b.z) + 1.6, b.z));
-    }
+      this.puffs.burst(new THREE.Vector3(b.x, tide.seaLevel, b.z), palette.splash, 10, 1.2, 1.8);
+      this.sound.sink(0.5 + i * 0.18);
+    });
+    this.sound.tide();
+    this.rig.cinematic(TIDE.tweenSeconds + 1);
     for (const b of tide.guarded) this.labels.burst(0, new THREE.Vector3(b.x, t.heightAt(b.x, b.z) + 1.6, b.z), '🛡 saved');
     this.hud.flashTide(tide);
   }
@@ -271,7 +332,10 @@ export class App {
   }
 
   choose(i: number): void {
-    if (this.game.choose(i)) this.afterAction();
+    if (this.game.choose(i)) {
+      this.sound.tick();
+      this.afterAction();
+    }
   }
 
   private sail(): void {
@@ -280,12 +344,37 @@ export class App {
     this.afterAction();
   }
 
-  private restart(): void {
+  /** Start a fresh run on a seed (menu, seed entry, daily island). */
+  newRun(seed: string): void {
     clearRun();
-    const seed = Math.random().toString(36).slice(2, 8);
+    this.setPhoto(false);
     this.game = Game.newRun(seed);
     this.loadIsland();
     this.afterAction();
+  }
+
+  openMenu(): void {
+    this.setPhoto(false);
+    const saved = loadRun();
+    const canContinue = this.game.state.status !== 'gameover' && !!saved;
+    this.menu.show(canContinue, this.game.state.seed);
+  }
+
+  /** Photo mode: hide all UI, loosen the camera. */
+  setPhoto(on: boolean): void {
+    if (this.photo === on) return;
+    this.photo = on;
+    this.container.classList.toggle('app-photo', on);
+    this.photoHint.classList.toggle('hidden', !on);
+    this.rig.setFree(on);
+    this.dirtyPreview = true;
+  }
+
+  private toggleMute(): boolean {
+    const m = this.sound.toggleMute();
+    this.hud.setMuted(m);
+    this.menu.setMuted(m);
+    return m;
   }
 
   private afterAction(): void {
@@ -306,6 +395,13 @@ export class App {
   }
 
   private frame(): void {
+    const cpuStart = performance.now();
+    this.frameInner();
+    this.cpuTimes.push(performance.now() - cpuStart);
+    if (this.cpuTimes.length > 4000) this.cpuTimes.shift();
+  }
+
+  private frameInner(): void {
     this.timer.update();
     const dt = Math.min(this.timer.getDelta(), 0.1);
     this.time += dt;
@@ -317,11 +413,83 @@ export class App {
     this.water.update(this.time);
     this.shoals?.update(this.time, this.displaySea);
     this.buildings.update(dt);
+    this.puffs.update(dt);
     this.hud.render(this.game, this.selected);
     this.renderer.render(this.scene, this.rig.camera);
     this.labels.update(this.rig.camera, this.container.clientWidth, this.container.clientHeight);
-    this.frameTimes.push(dt * 1000);
-    if (this.frameTimes.length > 600) this.frameTimes.shift();
+    const now = performance.now();
+    if (this.lastFrame) this.frameTimes.push(now - this.lastFrame);
+    this.lastFrame = now;
+    if (this.frameTimes.length > 4000) this.frameTimes.shift();
+  }
+
+  /**
+   * ?bench: fill a large island with `count` buildings (straight into the
+   * world, no scoring or tide), orbit the camera, and measure frame times.
+   */
+  async bench(count = 150, warmupMs = 1500, measureMs = 6000): Promise<BenchResult> {
+    const state = newRunState('bench');
+    state.island = 4;
+    state.hand = {};
+    this.game = new Game(state);
+    this.loadIsland();
+    const g = this.game;
+    const d = g.world.data;
+    let placed = 0;
+    let k = 0;
+    const step = 2;
+    for (let z = -d.halfSize + 2; z < d.halfSize - 2 && placed < count; z += step) {
+      for (let x = -d.halfSize + 2; x < d.halfSize - 2 && placed < count; x += step) {
+        // Rotate through every type; site-limited ones (Fisher, Lighthouse) take what fits.
+        const fits = (t: BuildingId): boolean => validatePlacement(g.world, t, x, z).ok;
+        const order = BUILDING_IDS.map((_, i) => BUILDING_IDS[(k + i) % BUILDING_IDS.length]);
+        // Clear trees in the way so the bench reaches its count on any seed.
+        if (!order.some(fits) && !g.world.buildings.query(x, z, 1.3).length) {
+          for (const t of g.world.trees.query(x, z, 1.3)) {
+            g.world.trees.remove(t.id);
+            this.props?.removeTree(t.id);
+          }
+        }
+        const type = order.find(fits);
+        if (!type) continue;
+        k++;
+        const b = { id: state.nextId++, type, x, z, r: BUILDINGS[type].footprint, rot: (k * 0.7) % (Math.PI * 2), score: 0, order: placed };
+        state.buildings.push(b);
+        g.world.addBuilding(b);
+        this.buildings.add(b, g.world.terrain.heightAt(x, z), false);
+        placed++;
+      }
+    }
+    this.select(null);
+    this.rig.autoYaw = 0.25;
+    const wait = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
+    await wait(warmupMs);
+    this.frameTimes = [];
+    this.cpuTimes = [];
+    const calls: number[] = [];
+    const t0 = performance.now();
+    while (performance.now() - t0 < measureMs) {
+      await wait(250);
+      calls.push(this.renderer.info.render.calls);
+    }
+    this.rig.autoYaw = 0;
+    const ft = [...this.frameTimes].sort((a, b) => a - b);
+    const avg = ft.reduce((a, b) => a + b, 0) / Math.max(ft.length, 1);
+    const p95 = ft[Math.min(ft.length - 1, Math.floor(ft.length * 0.95))] ?? 0;
+    const cpu = [...this.cpuTimes].sort((a, b) => a - b);
+    const result: BenchResult = {
+      buildings: placed,
+      frames: ft.length,
+      avgMs: +avg.toFixed(2),
+      p95Ms: +p95.toFixed(2),
+      cpuAvgMs: +(cpu.reduce((a, b) => a + b, 0) / Math.max(cpu.length, 1)).toFixed(2),
+      cpuP95Ms: +(cpu[Math.min(cpu.length - 1, Math.floor(cpu.length * 0.95))] ?? 0).toFixed(2),
+      fps: +(1000 / Math.max(avg, 1e-6)).toFixed(1),
+      drawCalls: Math.max(...calls),
+      triangles: this.renderer.info.render.triangles,
+    };
+    console.log(`[bench] ${JSON.stringify(result)}`);
+    return result;
   }
 
   /** Project a ground point to CSS pixels (for tests and tooling). */

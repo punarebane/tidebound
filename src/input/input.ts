@@ -3,7 +3,7 @@
  * pointer state, so a touch layer could feed the same interface later.
  */
 
-export type Action = 'panUp' | 'panDown' | 'panLeft' | 'panRight' | 'rotateLeft' | 'rotateRight' | 'rotateBuilding' | 'cancel';
+export type Action = 'panUp' | 'panDown' | 'panLeft' | 'panRight' | 'rotateLeft' | 'rotateRight' | 'rotateBuilding' | 'cancel' | 'photo' | 'mute' | 'hideHint';
 
 const BINDINGS: Record<string, Action> = {
   KeyW: 'panUp',
@@ -18,6 +18,9 @@ const BINDINGS: Record<string, Action> = {
   KeyE: 'rotateRight',
   KeyR: 'rotateBuilding',
   Escape: 'cancel',
+  KeyP: 'photo',
+  KeyM: 'mute',
+  KeyH: 'hideHint',
 };
 
 export interface PointerState {

@@ -10,6 +10,15 @@
 - **M3** All 10 buildings (Market, Lighthouse, Shrine, Farm, Seawall, Monument added) with models, icons and one Vitest per rule. Tide: rises every 6 placements, 5 steps of 0.35 per island; buildings whose ground is at or under the new level sink and cost their penalty; drowned trees vanish; Seawalls make buildings in their radius immune to the next rise. 1.5 s eased water tween, sinking animation, penalty labels, shimmer on terrain between the current and next sea level (stronger as the rise nears), tide gauge with pips and countdown, rise banner, flood warning in the placement hint. Voyage screen and game over summary (per-island scores, buildings built, lost to tide, packs taken).
 - **M4** `scripts/sim.ts` (+ `scripts/bots.ts`): greedy and random bots, 500 seeded games each across worker threads (~30 s total). `--set PATH=value` overrides for tuning sweeps, `--quiet` one-line summaries with sail-on rates, `scripts/trace.ts <seed>` to read one greedy game. All targets pass.
 
+### Session 3
+- **M5** Placement pop plus dust puffs; sinking buildings tip, slide under and splash; the camera pulls back, tilts and drifts during each rise. Web Audio soundscape, all synthesised: rolling sea loop (two noise layers on slow LFOs), placement plinks pitched by score (low and soft for negatives), threshold chime, tide swell, sinking glugs, UI ticks; mute with M or the toolbar (remembered). Main menu (Continue, New voyage, Daily island, seed entry, how to play, sound). Daily seed = `daily-YYYY-MM-DD` (UTC). Photo mode (P): hides all UI, looser camera (pitch 4-85°, zoom to 160, wider pan), H hides the hint, P/Esc returns. Toolbar: Menu, Photo, Sound.
+- **M6** `?bench` (or `?bench=N`): fills island 5 of seed `bench` with 150 buildings of every type, orbits the camera, and logs frame-time avg / p95, main-thread time, draw calls and triangles (console `[bench]`, `window.benchResult`, on-screen box). `npm run package` builds and zips `dist/` into `tidebound-itch.zip` (168 kB). `npm run screenshots` writes `screenshots/1-5`. Store copy and upload settings in `ITCH.md`.
+
+## Performance (`?bench`, 150 buildings)
+- Draw calls: 28 (target < 150). Triangles: ~133k.
+- Main thread per frame: 1.2 ms avg, 2.6 ms p95 (production build), well inside a 16.7 ms budget.
+- Frame time in this container: ~155 ms avg because it only has headless software WebGL (SwiftShader, no GPU); that number says nothing about real hardware. **The 60 fps target still needs one check on a real GPU:** open `/?bench` in a desktop browser and read the box in the corner.
+
 ## Balance (final numbers, `npm run sim`, seeds sim-0..sim-499)
 
 ```
@@ -52,16 +61,21 @@ Cross-check on a second seed set (`--seed-base alt`): greedy median 3, p90 5, to
 Tuning that got there (from the Session 1 placeholders): first threshold 8 -> 6, threshold step 4 -> 2, per-island threshold scale 1.3 -> 1.1, voyage 30 x 1.3^i -> 40 x 1.12^i, starter pack gained a Farm, Lumber camp radius 3.5 -> 2.3, Farm radius 4 -> 2.3, House radius 4 -> 5, Fisher radius 7 -> 8, more fish shoals (spacing 6 -> 5, chance 0.55 -> 0.85).
 
 ## State
-- `npm run dev` runs the game. `npm test` (Vitest, 48 tests), `npm run test:e2e` (Playwright: five scripted placements on seed `tidebound` whose score matches a core replay and the recorded total of 12, live labels match the preview, no console errors; a full greedy island through to the voyage / summary screen; resume after reload; screenshots in `test-results/`) and `npm run sim` all pass. `npm run build` passes.
+- `npm run dev` runs the game. `npm test` (Vitest, 51 tests), `npm run test:e2e` (Playwright, 5 tests: five scripted placements on seed `tidebound` whose score matches a core replay and the recorded total of 12, live labels match the preview, no console errors; a full greedy island through to the voyage / summary screen; resume after reload; menu, daily seed, seed entry and photo mode; `?bench` with 150 buildings; screenshots in `test-results/`) and `npm run sim` all pass. `npm run build` and `npm run package` pass.
 - Draw calls at the start of a run: ~13 (buildings are one instanced draw per type).
 
 ## Known bugs / rough edges
 - The greedy bot rarely gets value from Market, Lighthouse, Monument (each under 2% of its points) and never from Seawall (0 points by design). A planning human will use them more; worth a look in Session 4 if playtests agree.
 - About 1 in 5 greedy runs fail the first island (sail-on rates 0.80 / 0.80 / 0.63 / 0.42 / 0.24). Fine for the targets, but a human's first run may end early; consider a gentler first voyage after playtesting.
 - 12% of the greedy bot's buildings sink: it ignores the tide (it maximises immediate score). Humans get a flood warning in the hint.
-- Bundle is a single 620 kB chunk (three.js); fine for now, may split for M6.
+- Bundle is a single ~650 kB chunk (165 kB gzipped, mostly three.js). Fine for itch; could be split later.
+- 60 fps on real hardware is unverified (no GPU here); see Performance.
+- Audio has only been checked for errors headless, not listened to. Levels in `src/data/audio.ts` may need a pass by ear.
+- The Market card icon uses the House shape (different colour).
 - The e2e test pins the total (12) for its script and `tests/island.test.ts` pins the island hash; update both when scoring or generation change on purpose.
 
-## Next up (Session 3)
-- **M5** Juice and polish: placement animations (pop exists; add dust/particles), tide cinematic (camera pull-back during the rise), ambient sea loop and placement plinks via Web Audio, main menu, seed entry, daily-seed mode, photo mode (hide UI + free camera).
-- **M6** Ship: production build, itch.io zip, ITCH.md store copy, screenshots; `?bench` flag that places 150 buildings and logs frame-time average and p95.
+## Next up (Session 4, buffer)
+- Check `/?bench` on a real GPU; if it misses 60 fps, try shadow map 1024 and pixel ratio 1.5 first.
+- Listen to the audio and adjust levels.
+- Playtest feel: first-island difficulty (greedy fails it 20% of the time), Market / Lighthouse / Monument value, tide readability.
+- Upload to itch.io using ITCH.md (needs the owner's itch account).

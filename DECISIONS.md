@@ -44,3 +44,15 @@ Ambiguities in SPEC.md and how they were resolved (simplest option that fits).
 - **"Islands reached"** = islands started (1 = never sailed).
 - **Points share** for the 30% target uses points earned at placement (sink penalties are reported separately).
 - **Sim overrides** (`--set ECONOMY.voyageGrowth=1.1`) mutate the data objects inside sim workers only; the shipped numbers live in `src/data/`.
+
+## Session 3
+
+- **Menu shows on a plain visit only.** `?test`, `?bench` and `?seed=` links skip it, so shared seed links drop straight onto the island. The run behind the menu is the saved one (or a fresh random seed); "New run" on the game-over screen opens the menu.
+- **Daily seed is `daily-YYYY-MM-DD` in UTC**, so everyone shares the island regardless of time zone.
+- **Seed entry is normalised** (trimmed, lower-case, spaces to dashes, max 32 chars) so "Drift Wood" and "drift wood" are the same island.
+- **Audio starts on the first pointer or key press** (browser autoplay rules); mute state persists in localStorage.
+- **Tide cinematic is a camera envelope**, not a cutscene: input still works and the camera returns by itself.
+- **Photo mode** hides the HUD and labels with a CSS class, disables placement, and loosens camera limits; leaving it clamps back.
+- **Bench uses island index 4 of seed `bench`** (bigger island) and inserts buildings directly (no scoring, no tide, trees cleared where needed) so it always reaches 150. It reports main-thread time per frame alongside raw frame time, because headless runs use software WebGL.
+- **The Playwright bench test asserts building count, draw calls < 150 and main-thread time < 16.7 ms**, and only logs frame times (not meaningful without a GPU).
+- **Screenshots are committed** in `screenshots/` for the store page; regenerate with `npm run screenshots` against a running server.

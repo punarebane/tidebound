@@ -44,6 +44,9 @@ export const palette = {
     awningAlt: 0xa9d6e5,
   },
 
+  dust: 0xe9dcc4,
+  splash: 0xeefaf8,
+
   ghostValid: 0xa6ecb4,
   ghostInvalid: 0xf2a2a2,
   influenceRing: 0xffffff,

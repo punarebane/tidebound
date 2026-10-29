@@ -77,3 +77,29 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .summary { text-align: left; margin: 12px 0 6px; font-size: 14px; }
 .summary-row { display: flex; gap: 12px; padding: 4px 0; border-top: 1px solid var(--panel-border); }
 .summary-key { min-width: 120px; color: var(--text-soft); }
+.menu { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: var(--overlay); animation: fade 0.4s ease both; z-index: 10; }
+.menu.hidden { display: none; }
+.menu-card { width: min(440px, calc(100vw - 32px)); padding: 28px 30px 18px; text-align: center; animation: pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+.title { margin: 0; font-size: 46px; letter-spacing: 0.02em; color: var(--accent-strong); }
+.tagline { margin: 6px 0 18px; color: var(--text-soft); }
+.menu-buttons { display: flex; flex-direction: column; gap: 8px; }
+.menu-buttons .primary { margin-top: 0; }
+.secondary { padding: 10px 18px; border-radius: 12px; border: 2px solid var(--accent); background: transparent; color: var(--accent-strong); font-weight: 800; font-size: 15px; }
+.secondary:hover { background: var(--selected); }
+.soft { color: var(--text-soft); font-weight: 600; }
+.seed-row { display: flex; gap: 8px; margin-top: 12px; }
+.seed-input { flex: 1; min-width: 0; padding: 10px 12px; border-radius: 12px; border: 2px solid var(--panel-border); background: var(--glow); font: inherit; color: var(--text); user-select: text; }
+.seed-input:focus { outline: none; border-color: var(--accent); }
+.howto { margin-top: 14px; text-align: left; font-size: 13px; color: var(--text); }
+.howto summary { cursor: pointer; font-weight: 700; color: var(--text-soft); }
+.howto ul { padding-left: 18px; margin: 8px 0 0; }
+.howto li { margin-bottom: 4px; }
+.menu-foot { margin-top: 10px; }
+.link { border: none; background: none; color: var(--text-soft); font-size: 13px; text-decoration: underline; }
+.toolbar { position: absolute; right: 16px; top: 112px; display: flex; gap: 6px; pointer-events: auto; }
+.tool { padding: 6px 10px; border-radius: 10px; border: 1px solid var(--panel-border); background: var(--panel); font-size: 12px; color: var(--text-soft); }
+.tool:hover { color: var(--text); }
+.photo-hint { position: absolute; left: 50%; bottom: 18px; translate: -50% 0; padding: 6px 14px; border-radius: 12px; background: var(--panel); font-size: 13px; color: var(--text-soft); pointer-events: none; }
+.photo-hint.hidden { display: none; }
+.app-photo .hud, .app-photo .labels { display: none; }
+.bench-result { position: absolute; left: 16px; bottom: 16px; margin: 0; padding: 10px 14px; font-size: 13px; z-index: 20; }

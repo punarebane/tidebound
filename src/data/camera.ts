@@ -16,4 +16,13 @@ export const CAMERA = {
   zoomStep: 1.12,
   edgePanPx: 14,
   edgePan: true,
+  /** Tide cinematic: how far the camera pulls back and tilts up at the peak. */
+  cinematicPullBack: 0.28,
+  cinematicPitchDeg: 9,
+  cinematicYawDeg: 10,
+  /** Photo mode limits. */
+  photoMinPitchDeg: 4,
+  photoMaxPitchDeg: 85,
+  photoMaxDistance: 160,
+  photoPanBoundsFactor: 1.6,
 };

@@ -37,22 +37,25 @@ export class Labels {
    * merged. Labels that did not change keep their element (no re-pop).
    */
   setPreview(parts: Contribution[], total: number, anchor: THREE.Vector3, heightAt: (x: number, z: number) => number, valid: boolean): void {
-    const merged = new Map<string, { value: number; x: number; z: number }>();
+    const merged = new Map<string, { value: number; x: number; z: number; text?: string }>();
     for (const p of parts) {
       const k = `${p.x.toFixed(2)},${p.z.toFixed(2)}`;
       const m = merged.get(k);
-      if (m) m.value += p.value;
-      else merged.set(k, { value: p.value, x: p.x, z: p.z });
+      if (m) {
+        m.value += p.value;
+        if (p.text) m.text = p.text;
+      } else merged.set(k, { value: p.value, x: p.x, z: p.z, text: p.text });
     }
     const next = new Map<string, Label>();
     for (const [k, m] of merged) {
-      const key = `${k}:${m.value}`;
+      const key = `${k}:${m.value}:${m.text ?? ''}`;
       const old = this.preview.get(key);
       if (old) {
         next.set(key, old);
         this.preview.delete(key);
       } else {
-        next.set(key, this.make(fmt(m.value), `part ${cls(m.value)}`, new THREE.Vector3(m.x, heightAt(m.x, m.z) + 1.0, m.z), key));
+        const text = m.text && m.value === 0 ? m.text : m.text ? `${m.text} ${fmt(m.value)}` : fmt(m.value);
+        next.set(key, this.make(text, `part ${cls(m.value)}`, new THREE.Vector3(m.x, heightAt(m.x, m.z) + 1.0, m.z), key));
       }
     }
     for (const l of this.preview.values()) l.el.remove();

@@ -20,7 +20,7 @@ export const TIDE = {
   /** Rises per island. */
   maxSteps: 5,
   /** Sea level gained per rise. */
-  stepHeight: 0.4,
+  stepHeight: 0.35,
   /** Seconds the water takes to rise. */
   tweenSeconds: 1.5,
 };

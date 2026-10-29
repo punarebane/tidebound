@@ -14,10 +14,14 @@ export class IslandWorld {
   readonly patches = new SpatialHash<Point>(4);
   seaLevel = 0;
 
-  constructor(readonly data: IslandData, removedTrees: Iterable<number> = []) {
+  constructor(readonly data: IslandData, removedTrees: Iterable<number> = [], seaLevel = 0) {
     this.terrain = new Terrain(data);
+    this.seaLevel = seaLevel;
     const removed = new Set(removedTrees);
-    for (const t of data.trees) if (!removed.has(t.id)) this.trees.insert(t);
+    for (const t of data.trees) {
+      // Trees the tide has already drowned are gone too.
+      if (!removed.has(t.id) && this.terrain.heightAt(t.x, t.z) > seaLevel) this.trees.insert(t);
+    }
     for (const r of data.rocks) this.rocks.insert(r);
     for (const s of data.shoals) this.shoals.insert(s);
     for (const p of data.patches) this.patches.insert(p);

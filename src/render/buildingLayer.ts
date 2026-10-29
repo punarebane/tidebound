@@ -10,6 +10,9 @@ interface Slot {
   pos: THREE.Vector3;
   rot: number;
   age: number;
+  /** Seconds into sinking, or -1 if not sinking. */
+  sinking: number;
+  sinkTime: number;
 }
 
 const POP_SECONDS = 0.45;
@@ -63,7 +66,7 @@ export class BuildingLayer {
     let mesh = this.meshes.get(b.type)!;
     if (mesh.count >= mesh.instanceMatrix.count) mesh = this.makeMesh(b.type, mesh.instanceMatrix.count * 2);
     const index = mesh.count++;
-    const slot: Slot = { type: b.type, index, pos: new THREE.Vector3(b.x, y, b.z), rot: b.rot, age: animate ? 0 : POP_SECONDS };
+    const slot: Slot = { type: b.type, index, pos: new THREE.Vector3(b.x, y, b.z), rot: b.rot, age: animate ? 0 : POP_SECONDS, sinking: -1, sinkTime: 0 };
     this.slots.set(b.id, slot);
     this.byIndex.get(b.type)![index] = b.id;
     this.write(slot);
@@ -99,22 +102,51 @@ export class BuildingLayer {
     return this.slots.size;
   }
 
+  /** Tip over and slide under the water over `seconds`, then disappear. */
+  sink(id: number, seconds: number): void {
+    const slot = this.slots.get(id);
+    if (slot && slot.sinking < 0) {
+      slot.sinking = 0;
+      slot.sinkTime = seconds;
+    }
+  }
+
+  private tilt = new THREE.Quaternion();
+  private tiltAxis = new THREE.Vector3(1, 0, 0.4).normalize();
+  private p = new THREE.Vector3();
+
   private write(slot: Slot): void {
     const t = Math.min(slot.age / POP_SECONDS, 1);
     const sc = Math.max(easeOutBack(t), 0.001);
     this.q.setFromAxisAngle(this.up, slot.rot);
     this.s.set(sc, sc, sc);
-    this.m4.compose(slot.pos, this.q, this.s);
+    this.p.copy(slot.pos);
+    if (slot.sinking >= 0) {
+      const k = Math.min(slot.sinking / slot.sinkTime, 1);
+      const e = k * k * (3 - 2 * k);
+      this.p.y -= e * 2.2;
+      this.tilt.setFromAxisAngle(this.tiltAxis, e * 0.6);
+      this.q.premultiply(this.tilt);
+    }
+    this.m4.compose(this.p, this.q, this.s);
     const mesh = this.meshes.get(slot.type)!;
     mesh.setMatrixAt(slot.index, this.m4);
     mesh.instanceMatrix.needsUpdate = true;
   }
 
   update(dt: number): void {
-    for (const slot of this.slots.values()) {
+    const done: number[] = [];
+    for (const [id, slot] of this.slots) {
+      if (slot.sinking >= 0) {
+        slot.sinking += dt;
+        if (slot.sinking >= slot.sinkTime) done.push(id);
+        else this.write(slot);
+        continue;
+      }
       if (slot.age >= POP_SECONDS) continue;
       slot.age += dt;
       this.write(slot);
     }
+    for (const id of done) this.remove(id);
   }
 }

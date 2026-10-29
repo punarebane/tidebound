@@ -2,7 +2,7 @@
  * Scoring rules: one pure function per building, reading only the world's
  * spatial hashes and the params in src/data/buildings.ts.
  */
-import { BUILDINGS, type BuildingId } from '../data/buildings';
+import { BUILDINGS, BUILDING_IDS, type BuildingId } from '../data/buildings';
 import type { Contribution, ScoreResult } from './types';
 import type { IslandWorld } from './world';
 
@@ -38,6 +38,58 @@ export const RULES: Record<BuildingId, Rule> = {
   sawmill(w, x, z) {
     const def = BUILDINGS.sawmill;
     return w.buildingsNear(x, z, def.influence, 'lumber').map((l) => ({ value: def.params.perLumber, label: 'Lumber camp', x: l.x, z: l.z }));
+  },
+
+  market(w, x, z) {
+    const def = BUILDINGS.market;
+    const out: Contribution[] = w.buildingsNear(x, z, def.influence, 'house').map((h) => ({ value: def.params.perHouse, label: 'House', x: h.x, z: h.z }));
+    const rival = byDistance(x, z, w.buildingsNear(x, z, def.influence, 'market'))[0];
+    if (rival) out.push({ value: def.params.rivalPenalty, label: 'Rival market', x: rival.x, z: rival.z });
+    return out;
+  },
+
+  lighthouse(w, x, z) {
+    const def = BUILDINGS.lighthouse;
+    return w.buildingsNear(x, z, def.influence).map((b) => ({ value: def.params.perBuilding, label: BUILDINGS[b.type].name, x: b.x, z: b.z }));
+  },
+
+  shrine(w, x, z) {
+    const p = BUILDINGS.shrine.params;
+    const high = w.terrain.heightAt(x, z) >= w.data.shrineHeight;
+    return [{ value: high ? p.topBonus : p.baseBonus, label: high ? 'High ground' : 'Low ground', x, z }];
+  },
+
+  farm(w, x, z) {
+    const def = BUILDINGS.farm;
+    const out: Contribution[] = [];
+    for (const pt of w.patches.query(x, z, def.influence, true)) {
+      if (w.terrain.heightAt(pt.x, pt.z) <= w.seaLevel) continue;
+      if (w.buildings.query(pt.x, pt.z, 0).length) continue;
+      out.push({ value: def.params.perPatch, label: 'Grass', x: pt.x, z: pt.z });
+    }
+    if (w.terrain.coastDistance(x, z, w.seaLevel) <= def.influence) out.push({ value: def.params.coastPenalty, label: 'Salt air', x, z });
+    return out;
+  },
+
+  seawall(w, x, z) {
+    const def = BUILDINGS.seawall;
+    return w.buildingsNear(x, z, def.influence).map((b) => ({ value: 0, label: 'Guarded', text: '🛡', x: b.x, z: b.z }));
+  },
+
+  monument(w, x, z) {
+    const def = BUILDINGS.monument;
+    const p = def.params;
+    const near = byDistance(x, z, w.buildingsNear(x, z, def.influence));
+    const out: Contribution[] = [];
+    for (const type of BUILDING_IDS) {
+      const b = near.find((n) => n.type === type);
+      if (b) out.push({ value: p.perType, label: BUILDINGS[type].name, x: b.x, z: b.z });
+    }
+    if (out.length >= p.bonusTypes) {
+      const base = out.reduce((a, c) => a + c.value, 0);
+      out.push({ value: base * (p.bonusMultiplier - 1), label: `x${p.bonusMultiplier} variety`, text: `x${p.bonusMultiplier}`, x, z });
+    }
+    return out;
   },
 };
 

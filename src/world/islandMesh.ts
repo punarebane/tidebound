@@ -15,7 +15,26 @@ export function bandColour(h: number, normalY: number): number {
   return palette.snow;
 }
 
-export function buildIslandMesh(d: IslandData): THREE.Mesh {
+/** Uniforms for the "about to flood" shimmer on the terrain. */
+export interface ShimmerUniforms {
+  uSea: { value: number };
+  uNextSea: { value: number };
+  uShimmer: { value: number };
+  uTime: { value: number };
+  uShimmerColor: { value: THREE.Color };
+}
+
+export function createShimmerUniforms(): ShimmerUniforms {
+  return {
+    uSea: { value: 0 },
+    uNextSea: { value: 0 },
+    uShimmer: { value: 0 },
+    uTime: { value: 0 },
+    uShimmerColor: { value: new THREE.Color(palette.foam) },
+  };
+}
+
+export function buildIslandMesh(d: IslandData, shimmer: ShimmerUniforms): THREE.Mesh {
   const n = d.res;
   const w = n + 1;
   const tris = n * n * 2;
@@ -65,6 +84,30 @@ export function buildIslandMesh(d: IslandData): THREE.Mesh {
   geo.computeVertexNormals();
   geo.computeBoundingSphere();
   const mat = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.95, metalness: 0 });
+  mat.onBeforeCompile = (shader) => {
+    Object.assign(shader.uniforms, shimmer);
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vTideWorld;')
+      .replace('#include <project_vertex>', '#include <project_vertex>\nvTideWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        '#include <common>',
+        `#include <common>
+        varying vec3 vTideWorld;
+        uniform float uSea;
+        uniform float uNextSea;
+        uniform float uShimmer;
+        uniform float uTime;
+        uniform vec3 uShimmerColor;`,
+      )
+      .replace(
+        '#include <dithering_fragment>',
+        `#include <dithering_fragment>
+        float band = step(uSea, vTideWorld.y) * step(vTideWorld.y, uNextSea);
+        float wave = 0.5 + 0.5 * sin(uTime * 3.2 + vTideWorld.x * 0.9 + vTideWorld.z * 0.7);
+        gl_FragColor.rgb = mix(gl_FragColor.rgb, uShimmerColor, band * uShimmer * (0.18 + 0.32 * wave));`,
+      );
+  };
   const mesh = new THREE.Mesh(geo, mat);
   mesh.receiveShadow = true;
   mesh.castShadow = true;

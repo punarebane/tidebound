@@ -34,7 +34,14 @@ export function validatePlacement(w: IslandWorld, type: BuildingId, x: number, z
   if (type === 'fisher' && t.coastDistance(x, z, w.seaLevel) > BUILDINGS.fisher.params.maxCoastDistance) {
     return { ok: false, reason: 'notCoastal' };
   }
+  if (type === 'lighthouse' && !isCoastalCliff(w, x, z)) return { ok: false, reason: 'notCliff' };
   return { ok: true };
+}
+
+/** Lighthouse site: close to the sea but standing well above it. */
+export function isCoastalCliff(w: IslandWorld, x: number, z: number): boolean {
+  const p = BUILDINGS.lighthouse.params;
+  return w.terrain.heightAt(x, z) - w.seaLevel >= p.minHeightAboveSea && w.terrain.coastDistance(x, z, w.seaLevel) <= p.maxCoastDistance;
 }
 
 export const REASON_TEXT: Record<string, string> = {
@@ -43,4 +50,5 @@ export const REASON_TEXT: Record<string, string> = {
   slope: 'Too steep',
   overlap: 'Something is in the way',
   notCoastal: 'Must be near the coast',
+  notCliff: 'Needs a coastal cliff: high ground right by the sea',
 };

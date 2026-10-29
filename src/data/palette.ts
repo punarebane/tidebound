@@ -35,6 +35,13 @@ export const palette = {
     woodDark: 0x9b765a,
     stone: 0xd2cbc3,
     accent: 0xf4c86a,
+    field: 0xeed68f,
+    fieldDark: 0xd9be74,
+    stripe: 0xe58a7f,
+    lamp: 0xfff2b0,
+    torii: 0xe2836f,
+    awning: 0xf6b8a2,
+    awningAlt: 0xa9d6e5,
   },
 
   ghostValid: 0xa6ecb4,
@@ -59,6 +66,7 @@ export const palette = {
     shadow: 'rgba(60, 80, 90, 0.15)',
     overlay: 'rgba(214, 234, 238, 0.55)',
     glow: '#ffffff',
+    water: '#6bb1cc',
   },
 } as const;
 

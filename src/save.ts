@@ -1,7 +1,7 @@
 /** Run persistence in localStorage. Every access is guarded: storage can be missing or throw. */
 import type { RunState } from './core/game';
 
-const KEY = 'tidebound.run.v1';
+const KEY = 'tidebound.run.v2';
 
 export function saveRun(state: RunState): void {
   try {
@@ -16,7 +16,7 @@ export function loadRun(): RunState | null {
     const raw = localStorage.getItem(KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as RunState;
-    if (s && s.version === 1 && typeof s.seed === 'string') return s;
+    if (s && s.version === 2 && typeof s.seed === 'string') return s;
   } catch {
     // Corrupt or unavailable.
   }

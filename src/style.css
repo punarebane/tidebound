@@ -41,6 +41,12 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .icon-fisher { background: var(--icon-fisher); }
 .icon-lumber { background: var(--icon-lumber); }
 .icon-sawmill { background: var(--icon-sawmill); }
+.icon-market { background: var(--icon-market); }
+.icon-lighthouse { background: var(--icon-lighthouse); clip-path: polygon(40% 0, 60% 0, 75% 100%, 25% 100%); }
+.icon-shrine { background: var(--icon-shrine); clip-path: polygon(0 0, 100% 0, 100% 20%, 80% 20%, 80% 100%, 68% 100%, 68% 20%, 32% 20%, 32% 100%, 20% 100%, 20% 20%, 0 20%); }
+.icon-farm { background: var(--icon-farm); clip-path: polygon(0 40%, 100% 40%, 100% 100%, 0 100%); }
+.icon-seawall { background: var(--icon-seawall); clip-path: polygon(0 30%, 100% 30%, 100% 100%, 0 100%); }
+.icon-monument { background: var(--icon-monument); clip-path: polygon(50% 0, 65% 20%, 65% 85%, 85% 85%, 85% 100%, 15% 100%, 15% 85%, 35% 85%, 35% 20%); }
 .card .name { font-size: 13px; font-weight: 700; }
 .card .count { font-size: 12px; color: var(--text-soft); }
 .end-island { pointer-events: auto; position: absolute; right: 16px; bottom: 0; padding: 8px 14px; border-radius: 12px; border: 1px solid var(--panel-border); background: var(--panel); font-size: 13px; color: var(--text-soft); }
@@ -58,3 +64,16 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .offer-contents { font-size: 13px; color: var(--text-soft); }
 .primary { margin-top: 10px; padding: 10px 22px; border-radius: 12px; border: none; background: var(--accent); color: var(--glow); font-weight: 800; font-size: 16px; }
 .primary:hover { background: var(--accent-strong); }
+.tide { position: absolute; right: 16px; top: 16px; padding: 12px 16px; min-width: 190px; pointer-events: auto; transition: box-shadow 0.4s; }
+.tide.soon { box-shadow: 0 0 0 2px var(--accent), 0 6px 24px var(--shadow); }
+.tide-title { font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-soft); margin-bottom: 6px; }
+.tide-pips { display: flex; gap: 5px; margin-bottom: 6px; }
+.pip { width: 24px; height: 8px; border-radius: 4px; background: var(--bar-track); transition: background 0.6s; }
+.pip.on { background: var(--water); }
+.tide-text { font-size: 13px; font-weight: 700; }
+.banner { position: absolute; left: 50%; top: 110px; translate: -50% 0; padding: 10px 18px; border-radius: 14px; background: var(--panel); box-shadow: 0 6px 24px var(--shadow); font-weight: 800; pointer-events: none; }
+.banner.hidden { display: none; }
+.banner.show { animation: pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+.summary { text-align: left; margin: 12px 0 6px; font-size: 14px; }
+.summary-row { display: flex; gap: 12px; padding: 4px 0; border-top: 1px solid var(--panel-border); }
+.summary-key { min-width: 120px; color: var(--text-soft); }

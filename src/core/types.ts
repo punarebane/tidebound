@@ -12,12 +12,16 @@ export interface PlacedBuilding {
   score: number;
   /** Placement number on its island (0-based). */
   order: number;
+  /** Seawalls only: the tide step this wall guards against. */
+  guardStep?: number;
 }
 
 /** One +/- line of a score preview, anchored at the thing that caused it. */
 export interface Contribution {
   value: number;
   label: string;
+  /** Display override for the floating label (e.g. a shield for Seawalls). */
+  text?: string;
   x: number;
   z: number;
 }
@@ -27,6 +31,6 @@ export interface ScoreResult {
   parts: Contribution[];
 }
 
-export type InvalidReason = 'bounds' | 'water' | 'slope' | 'overlap' | 'notCoastal';
+export type InvalidReason = 'bounds' | 'water' | 'slope' | 'overlap' | 'notCoastal' | 'notCliff';
 
 export type Validity = { ok: true } | { ok: false; reason: InvalidReason };

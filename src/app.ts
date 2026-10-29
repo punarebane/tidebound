@@ -9,7 +9,9 @@ import { CameraRig } from './render/cameraRig';
 import { BuildingLayer } from './render/buildingLayer';
 import { Ghost } from './render/ghost';
 import { Labels } from './render/labels';
-import { buildHeightTexture, buildIslandMesh } from './world/islandMesh';
+import { buildHeightTexture, buildIslandMesh, createShimmerUniforms } from './world/islandMesh';
+import type { TideResult } from './core/tide';
+import { TIDE } from './data/economy';
 import { Props } from './world/props';
 import { raycastGround } from './world/raycast';
 import { Shoals } from './world/shoals';
@@ -45,6 +47,10 @@ export class App {
   private raycaster = new THREE.Raycaster();
   private ndc = new THREE.Vector2();
   private frameTimes: number[] = [];
+  private shimmer = createShimmerUniforms();
+  /** Sea level as drawn; lags the game's level while the tide tween runs. */
+  private displaySea = 0;
+  private tween: { from: number; to: number; t: number; trees: number[] } | null = null;
 
   constructor(private container: HTMLElement, public game: Game, private opts: AppOptions) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
@@ -121,13 +127,16 @@ export class App {
     }
     this.heightTex?.dispose();
 
-    this.terrainMesh = buildIslandMesh(d);
+    this.terrainMesh = buildIslandMesh(d, this.shimmer);
     this.scene.add(this.terrainMesh);
     const ht = buildHeightTexture(d);
     this.heightTex = ht.tex;
     this.water.setHeights(ht.tex, d.halfSize, ht.min, ht.range);
-    this.water.setLevel(g.world.seaLevel);
-    this.props = new Props(d, g.world.terrain, g.state.removedTrees);
+    this.tween = null;
+    this.displaySea = g.world.seaLevel;
+    this.water.setLevel(this.displaySea);
+    const alive = new Set([...g.world.trees.all()].map((t) => t.id));
+    this.props = new Props(d, g.world.terrain, d.trees.filter((t) => !alive.has(t.id)).map((t) => t.id));
     this.scene.add(this.props.group);
     this.shoals = new Shoals(d.shoals);
     this.scene.add(this.shoals.mesh);
@@ -195,24 +204,73 @@ export class App {
     const anchor = new THREE.Vector3(x, Math.max(t.heightAt(x, z), g.world.seaLevel) + 1.4, z);
     const heightAt = (px: number, pz: number): number => Math.max(t.heightAt(px, pz), g.world.seaLevel);
     this.labels.setPreview(pv.validity.ok ? pv.score.parts : [], pv.score.total, anchor, heightAt, pv.validity.ok);
-    this.hud.setHint(pv.validity.ok ? `${BUILDINGS[this.selected].name}: ${BUILDINGS[this.selected].blurb}` : REASON_TEXT[pv.validity.reason]);
+    const until = g.placementsUntilTide;
+    const floods = pv.validity.ok && until !== null && t.heightAt(x, z) <= g.nextSeaLevel;
+    const def = BUILDINGS[this.selected];
+    this.hud.setHint(
+      !pv.validity.ok
+        ? REASON_TEXT[pv.validity.reason]
+        : floods
+          ? `⚠ This spot floods at the next tide (in ${until} placement${until === 1 ? '' : 's'}): -${def.sinkPenalty}`
+          : `${def.name}: ${def.blurb}`,
+    );
   }
 
   private tryPlace(): void {
     this.updateHover();
-    const g = this.game;
     if (!this.selected || !this.hover) return;
-    const type = this.selected;
-    const res = g.place(type, this.hover.x, this.hover.z, this.ghost.rot);
-    if (!res) return;
+    this.placeAt(this.selected, this.hover.x, this.hover.z);
+  }
+
+  /** Place through the full view path (also used by tooling and the bench). */
+  placeAt(type: BuildingId, x: number, z: number): boolean {
+    const g = this.game;
+    const res = g.place(type, x, z, this.ghost.rot);
+    if (!res) return false;
     const t = g.world.terrain;
     this.buildings.add(res.building, t.heightAt(res.building.x, res.building.z));
     for (const id of res.treesRemoved) this.props?.removeTree(id);
     this.labels.burst(res.score.total, new THREE.Vector3(res.building.x, t.heightAt(res.building.x, res.building.z) + 1.8, res.building.z));
+    if (res.tide) this.startTide(res.tide);
     this.afterAction();
+    return true;
   }
 
-  private choose(i: number): void {
+  /** Animate a tide rise: water climbs, sunk buildings slide under, penalties pop. */
+  private startTide(tide: TideResult): void {
+    this.tween = { from: this.displaySea, to: tide.seaLevel, t: 0, trees: tide.treesFlooded };
+    const t = this.game.world.terrain;
+    for (const b of tide.sunk) {
+      this.buildings.sink(b.id, TIDE.tweenSeconds * 1.2);
+      this.labels.burst(-BUILDINGS[b.type].sinkPenalty, new THREE.Vector3(b.x, t.heightAt(b.x, b.z) + 1.6, b.z));
+    }
+    for (const b of tide.guarded) this.labels.burst(0, new THREE.Vector3(b.x, t.heightAt(b.x, b.z) + 1.6, b.z), '🛡 saved');
+    this.hud.flashTide(tide);
+  }
+
+  private updateTide(dt: number): void {
+    const tw = this.tween;
+    if (tw) {
+      tw.t += dt / TIDE.tweenSeconds;
+      const k = Math.min(tw.t, 1);
+      const e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+      this.displaySea = tw.from + (tw.to - tw.from) * e;
+      if (k >= 1) {
+        for (const id of tw.trees) this.props?.removeTree(id);
+        this.tween = null;
+      }
+    }
+    this.water.setLevel(this.displaySea);
+    const until = this.game.placementsUntilTide;
+    const target = until === null || this.tween ? 0 : until <= 1 ? 1 : until <= 3 ? 0.65 : 0.35;
+    const sh = this.shimmer;
+    sh.uShimmer.value += (target - sh.uShimmer.value) * Math.min(dt * 3, 1);
+    sh.uSea.value = this.displaySea;
+    sh.uNextSea.value = this.game.nextSeaLevel;
+    sh.uTime.value = this.time;
+  }
+
+  choose(i: number): void {
     if (this.game.choose(i)) this.afterAction();
   }
 
@@ -255,8 +313,9 @@ export class App {
     this.rig.update(dt);
     if (moving) this.updateHover();
     if (this.dirtyPreview) this.refreshPreview();
+    this.updateTide(dt);
     this.water.update(this.time);
-    this.shoals?.update(this.time, this.game.world.seaLevel);
+    this.shoals?.update(this.time, this.displaySea);
     this.buildings.update(dt);
     this.hud.render(this.game, this.selected);
     this.renderer.render(this.scene, this.rig.camera);

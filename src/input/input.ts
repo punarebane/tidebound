@@ -70,8 +70,8 @@ export class Input {
       if (!this.held.has(a)) this.pressHandlers.forEach((h) => h(a));
       this.held.add(a);
     }
-    const m = /^Digit([1-9])$/.exec(e.code);
-    if (m) this.digitHandlers.forEach((h) => h(Number(m[1])));
+    const m = /^Digit([0-9])$/.exec(e.code);
+    if (m) this.digitHandlers.forEach((h) => h(Number(m[1]) || 10));
   };
 
   private onKeyUp = (e: KeyboardEvent): void => {

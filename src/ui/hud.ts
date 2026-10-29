@@ -2,6 +2,8 @@
 import { BUILDINGS, BUILDING_IDS, type BuildingId } from '../data/buildings';
 import { packById } from '../core/economy';
 import type { Game } from '../core/game';
+import type { TideResult } from '../core/tide';
+import { TIDE } from '../data/economy';
 
 export interface HudHandlers {
   select(type: BuildingId): void;
@@ -33,6 +35,11 @@ export class Hud {
   private hint = el('div', 'hint');
   private modal = el('div', 'modal hidden');
   private endBtn = el('button', 'end-island', 'End island');
+  private tidePips = el('div', 'tide-pips');
+  private tideText = el('div', 'tide-text');
+  private tidePanel = el('div', 'panel tide');
+  private banner = el('div', 'banner hidden');
+  private bannerTimer = 0;
   private lastHandKey = '';
   private lastModalKey = '';
 
@@ -50,7 +57,9 @@ export class Hud {
     this.endBtn.addEventListener('click', () => this.h.endIsland());
     const bottom = el('div', 'bottom');
     bottom.append(this.hint, this.hand, this.endBtn);
-    this.root.append(top, bottom, this.modal);
+    this.tidePanel.append(el('div', 'tide-title', 'Tide'), this.tidePips, this.tideText);
+    for (let i = 0; i < TIDE.maxSteps; i++) this.tidePips.appendChild(el('span', 'pip'));
+    this.root.append(top, this.tidePanel, this.banner, bottom, this.modal);
     parent.appendChild(this.root);
 
     this.hand.addEventListener('click', (e) => {
@@ -65,6 +74,26 @@ export class Hud {
       if (a === 'sail') this.h.sail();
       if (a === 'restart') this.h.restart();
     });
+  }
+
+  /** Brief banner when the sea rises. */
+  flashTide(t: TideResult): void {
+    const lost = t.sunk.length;
+    const saved = t.guarded.length;
+    let text = `The tide rises (${t.step}/${TIDE.maxSteps})`;
+    if (lost) text += ` · ${lost} building${lost > 1 ? 's' : ''} lost, -${t.penalty}`;
+    if (saved) text += ` · ${saved} saved by seawalls`;
+    if (!lost && !saved) text += ' · everything stayed dry';
+    this.banner.textContent = text;
+    this.banner.classList.remove('hidden');
+    // Restart the CSS animation.
+    void this.banner.offsetWidth;
+    this.banner.classList.add('show');
+    window.clearTimeout(this.bannerTimer);
+    this.bannerTimer = window.setTimeout(() => {
+      this.banner.classList.remove('show');
+      this.banner.classList.add('hidden');
+    }, 3200);
   }
 
   setHint(text: string): void {
@@ -84,6 +113,11 @@ export class Hud {
     this.barVoyage.style.left = `${(voyageFrac * 100).toFixed(1)}%`;
     const voyageLeft = game.voyageThreshold - s.score;
     this.barText.textContent = `${hi - s.score} to next pack · ${voyageLeft > 0 ? `voyage at ${game.voyageThreshold}` : 'voyage ready ⛵'}`;
+
+    const until = game.placementsUntilTide;
+    Array.from(this.tidePips.children).forEach((p, i) => p.classList.toggle('on', i < s.tideStep));
+    this.tideText.textContent = until === null ? 'High tide: no more rises here' : `Rises in ${until} placement${until === 1 ? '' : 's'}`;
+    this.tidePanel.classList.toggle('soon', until !== null && until <= 1);
 
     const handKey = JSON.stringify([s.hand, selected, s.status]);
     if (handKey !== this.lastHandKey) {
@@ -114,6 +148,23 @@ export class Hud {
   handTypeAt(game: Game, n: number): BuildingId | null {
     const ids = BUILDING_IDS.filter((id) => (game.state.hand[id] ?? 0) > 0);
     return ids[n - 1] ?? null;
+  }
+
+  private summary(game: Game): HTMLElement {
+    const s = game.state;
+    const box = el('div', 'summary');
+    const islands = el('div', 'summary-row');
+    islands.append(el('span', 'summary-key', 'Per island'), el('span', '', s.islandScores.map((v, i) => `#${i + 1}: ${v}`).join(' · ') || '-'));
+    const placed = el('div', 'summary-row');
+    const counts = (Object.entries(s.stats.placed) as Array<[BuildingId, number]>).map(([id, n]) => `${n} ${BUILDINGS[id].name}`).join(', ');
+    placed.append(el('span', 'summary-key', 'Built'), el('span', '', counts || 'nothing'));
+    const sunkN = Object.values(s.stats.sunk).reduce((a, b) => a + (b ?? 0), 0);
+    const sunk = el('div', 'summary-row');
+    sunk.append(el('span', 'summary-key', 'Lost to the tide'), el('span', '', `${sunkN} building${sunkN === 1 ? '' : 's'}${s.stats.sinkPenalty ? ` (-${s.stats.sinkPenalty})` : ''}${s.stats.guarded ? `, ${s.stats.guarded} saved by seawalls` : ''}`));
+    const packs = el('div', 'summary-row');
+    packs.append(el('span', 'summary-key', 'Packs taken'), el('span', '', String(s.packsTaken.length)));
+    box.append(islands, placed, sunk, packs);
+    return box;
   }
 
   private renderModal(game: Game): void {
@@ -148,7 +199,8 @@ export class Hud {
       } else {
         box.append(
           el('h2', '', 'The voyage ends'),
-          el('p', '', `Final score ${s.score} across ${s.island + 1} island${s.island ? 's' : ''}.`),
+          el('p', '', `Final score ${s.score} across ${s.island + 1} island${s.island ? 's' : ''}. You needed ${game.voyageThreshold - s.islandStartScore} on this island to sail on.`),
+          this.summary(game),
         );
         const b = el('button', 'primary', 'New run');
         b.dataset.action = 'restart';

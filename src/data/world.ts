@@ -46,10 +46,10 @@ export const WORLD = {
   rockSpacing: 3.2,
   rockChance: 0.22,
   rockRadius: 0.55,
-  shoalSpacing: 6,
+  shoalSpacing: 5,
   shoalMinDepth: 0.4,
   shoalMaxDepth: 2.6,
-  shoalChance: 0.55,
+  shoalChance: 0.85,
   /** Flat grass patches (for farms): lattice spacing and flatness. */
   patchSpacing: 2,
   patchMinHeight: 0.9,

@@ -4,12 +4,12 @@ export const ECONOMY = {
    * Threshold k on island i (relative to the score at the island's start) is
    * the sum of increments (first + step * k) * islandScale^i.
    */
-  thresholdFirst: 8,
-  thresholdStep: 4,
-  islandScale: 1.3,
+  thresholdFirst: 6,
+  thresholdStep: 2,
+  islandScale: 1.1,
   /** Score needed on an island (relative to its start) to sail on: base * growth^i. */
-  voyageBase: 30,
-  voyageGrowth: 1.3,
+  voyageBase: 40,
+  voyageGrowth: 1.12,
   /** Packs offered per threshold. */
   offerCount: 2,
 };

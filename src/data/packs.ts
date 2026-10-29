@@ -15,7 +15,7 @@ export interface PackDef {
 export const STARTER_PACK: PackDef = {
   id: 'starter',
   name: 'Settlers',
-  contents: { house: 3, fisher: 1, lumber: 1 },
+  contents: { house: 3, fisher: 1, lumber: 1, farm: 1 },
   weight: 0,
   unlockAt: 0,
 };

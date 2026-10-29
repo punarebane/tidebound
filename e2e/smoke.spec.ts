@@ -99,4 +99,4 @@ test('place five buildings on a fixed seed and match the expected score', async 
   expect(errors).toEqual([]);
 });
 
-const EXPECTED_TOTAL = 15;
+const EXPECTED_TOTAL = 12;

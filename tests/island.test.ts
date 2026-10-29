@@ -13,7 +13,7 @@ describe('island generation', () => {
 
   it('matches the recorded hash for a fixed seed', () => {
     // If generation or src/data/world.ts changes on purpose, update this value.
-    expect(hashIsland(generateIsland('tidebound', 0))).toBe('a13bb291');
+    expect(hashIsland(generateIsland('tidebound', 0))).toBe('315f0784');
   });
 
   it('gives different islands for different seeds and indices', () => {

@@ -26,3 +26,21 @@ Ambiguities in SPEC.md and how they were resolved (simplest option that fits).
 - **Labels are DOM elements** projected from world space each frame (crisp text, CSS easing for the pop).
 - **Test hooks:** `?test` disables edge panning, ignores the saved run and exposes `window.tidebound`; `?seed=xyz` starts a fresh run on that seed.
 - **Playwright uses software WebGL** (SwiftShader flags in `playwright.config.ts`) so it runs headless in CI-like containers.
+
+## Session 2
+
+- **Lighthouse "coastal cliff"** = ground at least 1.2 above the current sea and within 4 units of the coast.
+- **Shrine "highest 10%"** = at or above the 90th percentile of land vertex heights (computed at generation, at sea level 0).
+- **Farm patches** are lattice points (2 units apart) on flat grass, generated with the island. A patch counts if it is dry and no building footprint covers it. "Within range of the coast" = coast distance from the farm centre <= its influence radius.
+- **Market rival penalty is a flat -5** however many other Markets are in range.
+- **Monument** counts distinct types among buildings in range (another Monument counts as a type). With 6+ types the whole sum doubles, shown as an extra "x2" label.
+- **Seawall** guards the rise right after it is placed (`guardStep = tideStep + 1`), including itself. After that rise its protection is spent.
+- **Sinking test is the ground at the building's centre** being at or below the new sea level. Tide steps are 0.35 so terrace flats (multiples of 1.6) never sit exactly on a step; the first terrace floods on the 5th rise.
+- **Trees drown** when the sea covers them (no score change). They are re-derived from the sea level on load, so saves don't store them.
+- **Order on the 6th placement:** score, thresholds, then the tide. Thresholds already crossed stay crossed even if a sink penalty drops the score below them.
+- **Placements count per island** (tide resets to 0 on a new island); the tide stops after 5 rises.
+- **Greedy bot details:** 200 positions sampled uniformly from land cells; every type in hand is tried at each; best immediate score wins, ties go to the spot nearest the last building (so 0-point Houses still cluster). It picks the offered pack whose contents have the best sampled scores. It ends an island when no sampled spot is valid. Runs are capped at 12 islands.
+- **Random bot:** random type from the hand at the first valid of 200 random positions, random pack.
+- **"Islands reached"** = islands started (1 = never sailed).
+- **Points share** for the 30% target uses points earned at placement (sink penalties are reported separately).
+- **Sim overrides** (`--set ECONOMY.voyageGrowth=1.1`) mutate the data objects inside sim workers only; the shipped numbers live in `src/data/`.

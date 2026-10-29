@@ -51,7 +51,7 @@ export function riseTide(w: IslandWorld, newStep: number): TideResult {
   const guarded: PlacedBuilding[] = [];
   const all = [...w.buildings.all()].sort((a, b) => a.id - b.id);
   for (const b of all) {
-    if (!isFlooded(w, b, sea)) continue;
+    if (BUILDINGS[b.type].stilts || !isFlooded(w, b, sea)) continue;
     if (isGuarded(w, b, newStep)) guarded.push(b);
     else sunk.push(b);
   }
@@ -62,7 +62,7 @@ export function riseTide(w: IslandWorld, newStep: number): TideResult {
   }
   treesFlooded.sort((a, b) => a - b);
   for (const id of treesFlooded) w.trees.remove(id);
-  w.seaLevel = sea;
+  w.setSeaLevel(sea);
   const penalty = sunk.reduce((a, b) => a + BUILDINGS[b.type].sinkPenalty, 0);
   return { step: newStep, from, seaLevel: sea, sunk, guarded, treesFlooded, penalty };
 }

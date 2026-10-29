@@ -3,6 +3,7 @@
  * run it in Node; the renderer turns it into meshes in islandMesh.ts.
  */
 import { WORLD } from '../data/world';
+import { TIDE } from '../data/economy';
 import { fbm, createNoise2D } from '../core/noise';
 import { mulberry32, seedFrom, type Rng } from '../core/rng';
 
@@ -24,6 +25,12 @@ export interface Point {
   r: number;
 }
 
+/** A spot where fish gather whenever the water above it is shallow enough. */
+export interface ShoalSite extends Point {
+  /** Sea-floor height at the spot. */
+  h: number;
+}
+
 export interface IslandData {
   seed: string;
   index: number;
@@ -34,7 +41,8 @@ export interface IslandData {
   heights: Float32Array;
   trees: Prop[];
   rocks: Prop[];
-  shoals: Point[];
+  /** Candidate shoal sites; which are active depends on the sea level. */
+  shoals: ShoalSite[];
   patches: Point[];
   /** Height above which the Shrine gets its bonus (top 10% of land). */
   shrineHeight: number;
@@ -135,12 +143,15 @@ export function generateIsland(seed: string, index: number): IslandData {
     rocks.push({ id: nextId++, x, z, r: WORLD.rockRadius, scale: 0.6 + rng() * 0.8, rot: rng() * Math.PI * 2, variant: Math.floor(rng() * 3) });
   }
 
-  const shoals: Point[] = [];
+  // Sites cover every depth the shallows will reach as the tide rises, so
+  // fish follow the coast inland.
+  const shoals: ShoalSite[] = [];
+  const topSea = TIDE.maxSteps * TIDE.stepHeight;
   for (const [x, z] of poissonDisk(rng, halfSize * 0.98, WORLD.shoalSpacing)) {
-    const depth = -sampleH(x, z);
-    if (depth < WORLD.shoalMinDepth || depth > WORLD.shoalMaxDepth) continue;
+    const h = sampleH(x, z);
+    if (h > topSea - WORLD.shoalMinDepth || h < -WORLD.shoalMaxDepth) continue;
     if (rng() > WORLD.shoalChance) continue;
-    shoals.push({ id: nextId++, x, z, r: 0.8 });
+    shoals.push({ id: nextId++, x, z, r: 0.8, h });
   }
 
   const patches: Point[] = [];

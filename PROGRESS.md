@@ -14,51 +14,54 @@
 - **M5** Placement pop plus dust puffs; sinking buildings tip, slide under and splash; the camera pulls back, tilts and drifts during each rise. Web Audio soundscape, all synthesised: rolling sea loop (two noise layers on slow LFOs), placement plinks pitched by score (low and soft for negatives), threshold chime, tide swell, sinking glugs, UI ticks; mute with M or the toolbar (remembered). Main menu (Continue, New voyage, Daily island, seed entry, how to play, sound). Daily seed = `daily-YYYY-MM-DD` (UTC). Photo mode (P): hides all UI, looser camera (pitch 4-85°, zoom to 160, wider pan), H hides the hint, P/Esc returns. Toolbar: Menu, Photo, Sound.
 - **M6** `?bench` (or `?bench=N`): fills island 5 of seed `bench` with 150 buildings of every type, orbits the camera, and logs frame-time avg / p95, main-thread time, draw calls and triangles (console `[bench]`, `window.benchResult`, on-screen box). `npm run package` builds and zips `dist/` into `tidebound-itch.zip` (168 kB). `npm run screenshots` writes `screenshots/1-5`. Store copy and upload settings in `ITCH.md`.
 
+### Playtest fixes (after Session 3, from Sander's first playtest)
+- **Fishers were pointless**: hard to place, rarely near fish, drowned by the tide, and stranded as the coast moved. Now they are stilt huts: only the centre needs dry ground (sloped beaches and an edge over the water are fine), the tide never sinks them, they turn to face the sea, and fish shoals follow the shallows inland as the sea rises. Fisher radius 8 -> 6 so they don't dominate (21% of greedy points, was 15%).
+- **Seawalls inland made no sense**: they must now be built on the shore (within 2 of the water) and face the sea.
+- Re-tuned to keep the targets: threshold step 2 -> 2.5, voyage base 40 -> 50. The greedy bot now loses ~1 building per game to the tide (was ~7.8), mostly because Fishers no longer sink.
+
 ## Performance (`?bench`, 150 buildings)
 - Draw calls: 28 (target < 150). Triangles: ~133k.
 - Main thread per frame: 1.2 ms avg, 2.6 ms p95 (production build), well inside a 16.7 ms budget.
 - Frame time in this container: ~155 ms avg because it only has headless software WebGL (SwiftShader, no GPU); that number says nothing about real hardware. **The 60 fps target still needs one check on a real GPU:** open `/?bench` in a desktop browser and read the box in the corner.
 
-## Balance (final numbers, `npm run sim`, seeds sim-0..sim-499)
+## Balance (final numbers after the playtest fixes, `npm run sim`, seeds sim-0..sim-499)
 
 ```
 === greedy bot (500 games) ===
-Islands reached: median 3, p90 5  hist {"1":99,"2":80,"3":120,"4":116,"5":65,"6":17,"7":3}
-Final score: median 185.5
+Islands reached: median 3, p90 5  hist {"1":44,"2":89,"3":151,"4":149,"5":62,"6":5}
+Final score: median 235.5
 Score per island (mean / median, games that finished it):
-  #1: 63.9 / 62  (500)
-  #2: 66.6 / 66  (401)
-  #3: 59.1 / 56  (321)
-  #4: 52.6 / 47  (201)
-  #5: 48.2 / 49  (85)
-  #6: 48.3 / 47.5  (20)
-  #7: 30.7 / 33  (3)
-Packs taken: woodcutters 1121, fields 1005, harbour 916, mill 817, timber 678, pilgrims 608, village 413, hamlet 367, grand 306, beacon 304, marketday 275, breakwater 140
-Buildings placed: house 12827, lumber 7441, fisher 3994, farm 3846, sawmill 1495, shrine 608, market 581, monument 305, lighthouse 281, seawall 280
-Share of points: farm 27.0%, lumber 25.3%, house 18.5%, fisher 15.1%, sawmill 6.5%, shrine 4.6%, market 1.7%, lighthouse 0.8%, monument 0.5%, seawall 0.0%
-Tide: 7.76 buildings sunk per game (12.2% of placed); 44.9% of rises sink something; 496/500 games lose a building
+  #1: 78.9 / 81  (500)
+  #2: 75 / 76  (456)
+  #3: 68.4 / 65  (367)
+  #4: 60.3 / 61  (216)
+  #5: 54 / 53  (67)
+  #6: 52.8 / 55  (5)
+Packs taken: harbour 1413, fields 1085, woodcutters 1054, mill 780, timber 690, pilgrims 623, village 554, beacon 393, hamlet 317, grand 311, marketday 239, breakwater 102
+Buildings placed: house 13773, lumber 7349, fisher 5384, farm 4087, sawmill 1469, shrine 623, market 550, lighthouse 336, monument 309, seawall 141
+Share of points: farm 25.8%, lumber 22.7%, fisher 20.7%, house 18.1%, sawmill 5.6%, shrine 4.2%, market 1.5%, lighthouse 0.9%, monument 0.5%, seawall 0.0%
+Tide: 1 buildings sunk per game (1.5% of placed); 4.8% of rises sink something; 201/500 games lose a building
 
 === random bot (500 games) ===
-Islands reached: median 1, p90 1  hist {"1":498,"2":2}
-Final score: median 8
+Islands reached: median 1, p90 1  hist {"1":500}
+Final score: median 6
 Score per island (mean / median, games that finished it):
-  #1: 8.1 / 8  (500)
-  #2: 3 / 3  (2)
-Packs taken: harbour 88, woodcutters 84, hamlet 66, fields 57, mill 45, marketday 44, beacon 12, village 10, breakwater 7, pilgrims 6, timber 1
-Buildings placed: house 2192, lumber 763, fisher 681, farm 616, sawmill 46, market 44, seawall 14, lighthouse 11, shrine 6, monument 0
-Share of points: farm 44.5%, fisher 32.2%, lumber 14.7%, house 6.7%, sawmill 0.8%, market 0.6%, lighthouse 0.3%, shrine 0.3%, seawall 0.0%, monument 0.0%
-Tide: 0.43 buildings sunk per game (4.9% of placed); 28.1% of rises sink something; 154/500 games lose a building
+  #1: 7.8 / 6  (500)
+Packs taken: harbour 71, woodcutters 66, hamlet 56, fields 53, mill 38, marketday 24, village 8, pilgrims 6, beacon 6, breakwater 2
+Buildings placed: house 2030, lumber 708, fisher 656, farm 606, sawmill 38, market 24, shrine 6, lighthouse 5, seawall 3, monument 0
+Share of points: farm 46.5%, fisher 28.2%, lumber 16.3%, house 6.9%, sawmill 1.0%, market 0.6%, lighthouse 0.3%, shrine 0.1%, seawall 0.0%, monument 0.0%
+Tide: 0.18 buildings sunk per game (2.2% of placed); 14.6% of rises sink something; 80/500 games lose a building
 
 Targets
   PASS  greedy median islands = 3 (got 3)
   PASS  greedy p90 islands >= 5 (got 5)
-  PASS  no building > 30% of greedy points (top: farm 27.0%)
+  PASS  no building > 30% of greedy points (top: farm 25.8%)
   PASS  random median islands = 1 (got 1)
 ```
 
-Cross-check on a second seed set (`--seed-base alt`): greedy median 3, p90 5, top share lumber 26%.
+Cross-check on a second seed set (`--seed-base alt`): greedy median 3, p90 5, top share farm 26%, Fisher 21%.
 
-Tuning that got there (from the Session 1 placeholders): first threshold 8 -> 6, threshold step 4 -> 2, per-island threshold scale 1.3 -> 1.1, voyage 30 x 1.3^i -> 40 x 1.12^i, starter pack gained a Farm, Lumber camp radius 3.5 -> 2.3, Farm radius 4 -> 2.3, House radius 4 -> 5, Fisher radius 7 -> 8, more fish shoals (spacing 6 -> 5, chance 0.55 -> 0.85).
+Tuning that got there (from the Session 1 placeholders): first threshold 8 -> 6, threshold step 4 -> 2.5, per-island threshold scale 1.3 -> 1.1, voyage 30 x 1.3^i -> 50 x 1.12^i, starter pack gained a Farm, Lumber camp radius 3.5 -> 2.3, Farm radius 4 -> 2.3, House radius 4 -> 5, Fisher radius 7 -> 6, more and shallower fish shoals (spacing 6 -> 4.5, chance 0.55 -> 0.85, depth 0.3-2.2).
 
 ## State
 - `npm run dev` runs the game. `npm test` (Vitest, 51 tests), `npm run test:e2e` (Playwright, 5 tests: five scripted placements on seed `tidebound` whose score matches a core replay and the recorded total of 12, live labels match the preview, no console errors; a full greedy island through to the voyage / summary screen; resume after reload; menu, daily seed, seed entry and photo mode; `?bench` with 150 buildings; screenshots in `test-results/`) and `npm run sim` all pass. `npm run build` and `npm run package` pass.
@@ -66,8 +69,8 @@ Tuning that got there (from the Session 1 placeholders): first threshold 8 -> 6,
 
 ## Known bugs / rough edges
 - The greedy bot rarely gets value from Market, Lighthouse, Monument (each under 2% of its points) and never from Seawall (0 points by design). A planning human will use them more; worth a look in Session 4 if playtests agree.
-- About 1 in 5 greedy runs fail the first island (sail-on rates 0.80 / 0.80 / 0.63 / 0.42 / 0.24). Fine for the targets, but a human's first run may end early; consider a gentler first voyage after playtesting.
-- 12% of the greedy bot's buildings sink: it ignores the tide (it maximises immediate score). Humans get a flood warning in the hint.
+- About 1 in 11 greedy runs fail the first island (sail-on rates 0.91 / 0.80 / 0.59 / 0.31 / 0.07). Fine for the targets, but a human's first run may end early; consider a gentler first voyage after playtesting.
+- The tide now sinks only ~1 greedy building per game. If it feels toothless in play, raise `TIDE.stepHeight` or Market/House sink penalties.
 - Bundle is a single ~650 kB chunk (165 kB gzipped, mostly three.js). Fine for itch; could be split later.
 - 60 fps on real hardware is unverified (no GPU here); see Performance.
 - Audio has only been checked for errors headless, not listened to. Levels in `src/data/audio.ts` may need a pass by ear.

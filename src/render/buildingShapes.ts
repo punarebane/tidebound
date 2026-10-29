@@ -42,8 +42,14 @@ const SHAPES: Record<BuildingId, Part[]> = {
     P('box', [0.18, 0.3, 0.02], [0, 0.15, 0.38], 'woodDark'),
   ],
   fisher: [
-    P('box', [0.8, 0.5, 0.7], [0, 0.25, 0], 'wallWarm'),
-    P('gable', [0.95, 0.38, 0.85], [0, 0.5, 0], 'roofBlue'),
+    // Stilts reach well below the floor so the hut stands in rising water.
+    P('cyl', [0.05, 1.6], [-0.33, -0.7, -0.28], 'woodDark', undefined, 5),
+    P('cyl', [0.05, 1.6], [0.33, -0.7, -0.28], 'woodDark', undefined, 5),
+    P('cyl', [0.05, 1.6], [-0.33, -0.7, 0.28], 'woodDark', undefined, 5),
+    P('cyl', [0.05, 1.6], [0.33, -0.7, 0.28], 'woodDark', undefined, 5),
+    P('box', [0.95, 0.06, 0.85], [0, 0.03, 0], 'wood'),
+    P('box', [0.8, 0.5, 0.7], [0, 0.31, 0], 'wallWarm'),
+    P('gable', [0.95, 0.38, 0.85], [0, 0.56, 0], 'roofBlue'),
     P('cyl', [0.05, 1.3], [0.55, 0.65, 0.35], 'wood'),
     P('box', [0.5, 0.12, 0.22], [-0.2, 0.06, 0.55], 'wood'),
     P('box', [0.3, 0.04, 0.3], [0.55, 1.15, 0.35], 'accent'),

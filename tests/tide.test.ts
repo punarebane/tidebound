@@ -101,3 +101,39 @@ describe('tide', () => {
     expect(again.world.buildings.size).toBe(g.world.buildings.size);
   });
 });
+
+describe('playtest fixes: Fishers and Seawalls', () => {
+  it('Fishers stand on stilts: the tide never sinks them', () => {
+    const w = fakeWorld({ height: ramp });
+    add(w, 1, 'house', 8.6, 0);
+    w.addBuilding({ id: 2, type: 'fisher', x: 8.6, z: 4, r: 0.8, rot: 0, score: 0, order: 0 });
+    const r = riseTide(w, 3);
+    expect(r.sunk.map((b) => b.id)).toEqual([1]);
+    expect(w.buildings.get(2)).toBeDefined();
+  });
+
+  it('a Fisher may hang over the water and stand on a sloped beach', () => {
+    // Steep-ish beach: 0.35 per unit, too steep for a House.
+    const w = fakeWorld({ height: (x, z) => (Math.hypot(x, z) <= 15 ? 0.35 * (10 - x) : -2) });
+    expect(validatePlacement(w, 'house', 9.5, 0).ok).toBe(false);
+    expect(validatePlacement(w, 'fisher', 9.5, 0)).toEqual({ ok: true });
+  });
+
+  it('fish shoals follow the shallows inland as the sea rises', () => {
+    // Shoal sites at several sea-floor heights.
+    const w = fakeWorld({ height: ramp });
+    const sites = [[-1.5, 0], [0, 0], [1.2, 0]].map(([h, i]) => ({ id: 500 + h * 10 + i, x: 20, z: h, r: 0.8, h }));
+    (w.data as { shoals: unknown }).shoals = sites;
+    w.setSeaLevel(0);
+    const ids = (): number[] => [...w.shoals.all()].map((s) => s.h).sort();
+    expect(ids()).toEqual([-1.5]);
+    w.setSeaLevel(1.75);
+    expect(ids()).toEqual([-1.5, 0, 1.2].filter((h) => 1.75 - h >= 0.3 && 1.75 - h <= 2.2).sort());
+  });
+
+  it('Seawalls must be built on the shore', () => {
+    const w = fakeWorld();
+    expect(validatePlacement(w, 'seawall', 0, 0)).toEqual({ ok: false, reason: 'notShore' });
+    expect(validatePlacement(w, 'seawall', 10, 0)).toEqual({ ok: true });
+  });
+});

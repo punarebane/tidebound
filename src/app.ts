@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { BUILDING_IDS, BUILDINGS, type BuildingId } from './data/buildings';
 import { palette } from './data/palette';
 import { Game, newRunState } from './core/game';
-import { REASON_TEXT, validatePlacement } from './core/placement';
+import { REASON_TEXT, seaFacingYaw, validatePlacement } from './core/placement';
 import { Input } from './input/input';
 import { CameraRig } from './render/cameraRig';
 import { BuildingLayer } from './render/buildingLayer';
@@ -190,7 +190,7 @@ export class App {
     const alive = new Set([...g.world.trees.all()].map((t) => t.id));
     this.props = new Props(d, g.world.terrain, d.trees.filter((t) => !alive.has(t.id)).map((t) => t.id));
     this.scene.add(this.props.group);
-    this.shoals = new Shoals(d.shoals);
+    this.shoals = new Shoals([...g.world.shoals.all()]);
     this.scene.add(this.shoals.mesh);
 
     this.buildings.clear();
@@ -252,7 +252,7 @@ export class App {
     const { x, z } = this.hover;
     const pv = g.preview(this.selected, x, z);
     const t = g.world.terrain;
-    this.ghost.show(t, g.world.seaLevel, x, z, pv.validity.ok);
+    this.ghost.show(t, g.world.seaLevel, x, z, pv.validity.ok, this.rotFor(this.selected, x, z));
     const anchor = new THREE.Vector3(x, Math.max(t.heightAt(x, z), g.world.seaLevel) + 1.4, z);
     const heightAt = (px: number, pz: number): number => Math.max(t.heightAt(px, pz), g.world.seaLevel);
     this.labels.setPreview(pv.validity.ok ? pv.score.parts : [], pv.score.total, anchor, heightAt, pv.validity.ok);
@@ -275,10 +275,16 @@ export class App {
     this.placeAt(this.selected, this.hover.x, this.hover.z);
   }
 
+  /** Shore buildings (Fisher, Seawall) turn to face the sea; others use R. */
+  private rotFor(type: BuildingId, x: number, z: number): number {
+    if (type !== 'fisher' && type !== 'seawall') return this.ghost.rot;
+    return seaFacingYaw(this.game.world, x, z) ?? this.ghost.rot;
+  }
+
   /** Place through the full view path (also used by tooling and the bench). */
   placeAt(type: BuildingId, x: number, z: number): boolean {
     const g = this.game;
-    const res = g.place(type, x, z, this.ghost.rot);
+    const res = g.place(type, x, z, this.rotFor(type, x, z));
     if (!res) return false;
     const t = g.world.terrain;
     this.buildings.add(res.building, t.heightAt(res.building.x, res.building.z));
@@ -318,6 +324,8 @@ export class App {
       this.displaySea = tw.from + (tw.to - tw.from) * e;
       if (k >= 1) {
         for (const id of tw.trees) this.props?.removeTree(id);
+        // The fish have moved to the new shallows.
+        this.shoals?.setPoints([...this.game.world.shoals.all()]);
         this.tween = null;
       }
     }

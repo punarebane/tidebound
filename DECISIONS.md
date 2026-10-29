@@ -56,3 +56,10 @@ Ambiguities in SPEC.md and how they were resolved (simplest option that fits).
 - **Bench uses island index 4 of seed `bench`** (bigger island) and inserts buildings directly (no scoring, no tide, trees cleared where needed) so it always reaches 150. It reports main-thread time per frame alongside raw frame time, because headless runs use software WebGL.
 - **The Playwright bench test asserts building count, draw calls < 150 and main-thread time < 16.7 ms**, and only logs frame times (not meaningful without a GPU).
 - **Screenshots are committed** in `screenshots/` for the store page; regenerate with `npm run screenshots` against a running server.
+
+## Playtest fixes (Sander's first playtest)
+
+- **Fishers are stilt huts** (`stilts: true` in data): placement checks only the centre (dry, normal.y >= 0.8), and the tide never sinks them. This departs from "buildings below the new level sink" for Fishers only, because a coastal building that always drowns was pointless in play.
+- **Fish shoals follow the sea.** Generation makes shoal *sites* over every depth the shallows will reach (sea floor from -2.2 up to the top tide level minus 0.3). A site is active while the water above it is 0.3-2.2 deep, so shoals creep inland with the tide.
+- **Seawalls must be on the shore** (coast distance <= 2, new reason "notShore"). They still guard only the next rise, as the spec says.
+- **Fishers and Seawalls auto-face the sea** using the coast-distance gradient (visual only).

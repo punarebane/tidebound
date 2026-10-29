@@ -31,6 +31,6 @@ export interface ScoreResult {
   parts: Contribution[];
 }
 
-export type InvalidReason = 'bounds' | 'water' | 'slope' | 'overlap' | 'notCoastal' | 'notCliff';
+export type InvalidReason = 'bounds' | 'water' | 'slope' | 'overlap' | 'notCoastal' | 'notShore' | 'notCliff';
 
 export type Validity = { ok: true } | { ok: false; reason: InvalidReason };

@@ -10,14 +10,23 @@ export class Shoals {
   private s = new THREE.Vector3();
   private p = new THREE.Vector3();
 
-  constructor(private points: Point[]) {
+  private points: Point[];
+
+  constructor(points: Point[]) {
+    this.points = points;
     const geo = new THREE.RingGeometry(0.45, 0.75, 20).rotateX(-Math.PI / 2);
     const mat = new THREE.MeshBasicMaterial({ color: palette.shoal, transparent: true, opacity: 0.7, depthWrite: false });
-    this.mesh = new THREE.InstancedMesh(geo, mat, Math.max(points.length, 1));
+    // Room for every site that could become active as the sea rises.
+    this.mesh = new THREE.InstancedMesh(geo, mat, 512);
     this.mesh.count = points.length;
     this.mesh.renderOrder = 2;
     this.mesh.frustumCulled = false;
     this.mesh.name = 'shoals';
+  }
+
+  setPoints(points: Point[]): void {
+    this.points = points.slice(0, this.mesh.instanceMatrix.count);
+    this.mesh.count = this.points.length;
   }
 
   update(time: number, seaLevel: number): void {

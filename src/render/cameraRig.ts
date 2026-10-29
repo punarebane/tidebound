@@ -74,6 +74,12 @@ export class CameraRig {
     this.apply();
   }
 
+  /** Glide to look at a ground point from a given distance (tooling, screenshots). */
+  focus(x: number, z: number, distance = this.goalDist): void {
+    this.goalTarget.set(x, 1, z);
+    this.goalDist = THREE.MathUtils.clamp(distance, CAMERA.minDistance, CAMERA.maxDistance);
+  }
+
   /** Snap all damped values to their goals (used by tests for stable projections). */
   settle(): void {
     this.target.copy(this.goalTarget);

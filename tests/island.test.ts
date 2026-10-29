@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { generateIsland, hashIsland } from '../src/world/islandGen';
 import { Terrain } from '../src/world/terrain';
+import { IslandWorld } from '../src/core/world';
 
 describe('island generation', () => {
   it('is deterministic: the same seed gives the same island', () => {
@@ -13,7 +14,7 @@ describe('island generation', () => {
 
   it('matches the recorded hash for a fixed seed', () => {
     // If generation or src/data/world.ts changes on purpose, update this value.
-    expect(hashIsland(generateIsland('tidebound', 0))).toBe('315f0784');
+    expect(hashIsland(generateIsland('tidebound', 0))).toBe('8c34406b');
   });
 
   it('gives different islands for different seeds and indices', () => {
@@ -34,7 +35,9 @@ describe('island generation', () => {
       expect(d.rocks.length).toBeGreaterThan(3);
       expect(d.shoals.length).toBeGreaterThan(3);
       const t = new Terrain(d);
-      for (const s of d.shoals) expect(t.heightAt(s.x, s.z)).toBeLessThan(0);
+      const w = new IslandWorld(d);
+      expect(w.shoals.size).toBeGreaterThan(3);
+      for (const s of w.shoals.all()) expect(t.heightAt(s.x, s.z)).toBeLessThan(0);
       for (const tr of d.trees) expect(t.heightAt(tr.x, tr.z)).toBeGreaterThan(0);
     }
   });

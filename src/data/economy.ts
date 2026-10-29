@@ -5,10 +5,10 @@ export const ECONOMY = {
    * the sum of increments (first + step * k) * islandScale^i.
    */
   thresholdFirst: 6,
-  thresholdStep: 2,
+  thresholdStep: 2.5,
   islandScale: 1.1,
   /** Score needed on an island (relative to its start) to sail on: base * growth^i. */
-  voyageBase: 40,
+  voyageBase: 50,
   voyageGrowth: 1.12,
   /** Packs offered per threshold. */
   offerCount: 2,
@@ -34,4 +34,6 @@ export const PLACEMENT = {
   minFreeboard: 0.05,
   /** Samples on the footprint ring. */
   ringSamples: 8,
+  /** Stilt buildings: min normal.y at the centre (beaches are sloped). */
+  stiltMinNormalY: 0.8,
 };

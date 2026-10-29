@@ -16,7 +16,8 @@ export interface RuleParams {
   shrine: { topBonus: number; baseBonus: number };
   /** Patches count when flat grass, dry and not under a building. */
   farm: { perPatch: number; coastPenalty: number };
-  seawall: Record<string, never>;
+  /** Must stand within maxCoastDistance of the sea. */
+  seawall: { maxCoastDistance: number };
   monument: { perType: number; bonusTypes: number; bonusMultiplier: number };
 }
 
@@ -31,6 +32,11 @@ export interface BuildingDef<K extends BuildingId = BuildingId> {
   influence: number;
   /** Points lost when the tide sinks it. */
   sinkPenalty: number;
+  /**
+   * Built on stilts: only its centre needs dry, gentle ground (the edge may
+   * hang over water or a slope), and the tide never sinks it.
+   */
+  stilts?: boolean;
   params: RuleParams[K];
 }
 
@@ -47,10 +53,11 @@ export const BUILDINGS: { [K in BuildingId]: BuildingDef<K> } = {
   fisher: {
     id: 'fisher',
     name: 'Fisher',
-    blurb: '+2 per fish shoal in range. Must be within 2 of the coast',
+    blurb: '+2 per fish shoal in range. Built on stilts at the shore; the tide never sinks it',
     footprint: 0.8,
-    influence: 8,
+    influence: 6,
     sinkPenalty: 3,
+    stilts: true,
     params: { perShoal: 2, maxCoastDistance: 2 },
   },
   lumber: {
@@ -110,11 +117,11 @@ export const BUILDINGS: { [K in BuildingId]: BuildingDef<K> } = {
   seawall: {
     id: 'seawall',
     name: 'Seawall',
-    blurb: 'No points. Buildings in its radius survive the next tide rise',
+    blurb: 'No points. Build it on the shore: buildings in its radius survive the next tide rise',
     footprint: 0.9,
     influence: 5,
     sinkPenalty: 2,
-    params: {},
+    params: { maxCoastDistance: 2 },
   },
   monument: {
     id: 'monument',

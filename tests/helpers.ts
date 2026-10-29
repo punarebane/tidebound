@@ -32,7 +32,8 @@ export function fakeIsland(o: FakeIslandOpts = {}): IslandData {
     heights,
     trees: (o.trees ?? []).map((p) => prop(p, 0.35)),
     rocks: (o.rocks ?? []).map((p) => prop(p, 0.55)),
-    shoals: (o.shoals ?? []).map((p) => pt(p, 0.8)),
+    // Shoal sites one unit deep at sea level 0, wherever the test puts them.
+    shoals: (o.shoals ?? []).map((p) => ({ ...pt(p, 0.8), h: -1 })),
     patches: (o.patches ?? []).map((p) => pt(p, 1)),
     shrineHeight: 10,
     maxHeight: Math.max(...heights),

@@ -44,12 +44,12 @@ export class Ghost {
     this.group.visible = false;
   }
 
-  show(terrain: Terrain, seaLevel: number, x: number, z: number, valid: boolean): void {
+  show(terrain: Terrain, seaLevel: number, x: number, z: number, valid: boolean, rot = this.rot): void {
     if (!this.type) return;
     const def = buildingDef(this.type);
     const y = Math.max(terrain.heightAt(x, z), seaLevel);
     this.mesh.position.set(x, y, z);
-    this.mesh.rotation.y = this.rot;
+    this.mesh.rotation.y = rot;
     const col = valid ? palette.ghostValid : palette.ghostInvalid;
     this.mat.color.setHex(col);
     (this.footRing.material as THREE.LineBasicMaterial).color.setHex(col);

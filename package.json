@@ -13,7 +13,8 @@
     "sim": "tsx scripts/sim.ts",
     "package": "npm run build && node scripts/package.mjs",
     "screenshots": "node scripts/screenshots.mjs",
-    "bench": "node scripts/bench.mjs"
+    "bench": "node scripts/bench.mjs",
+    "cover": "node scripts/cover.mjs"
   },
   "dependencies": {
     "three": "^0.186.1"

@@ -80,6 +80,12 @@ export class CameraRig {
     this.goalDist = THREE.MathUtils.clamp(distance, CAMERA.minDistance, CAMERA.maxDistance);
   }
 
+  /** Set the orbit angles in radians (tooling, screenshots). Pitch is clamped. */
+  orbit(yaw: number, pitch = this.goalPitch): void {
+    this.goalYaw = yaw;
+    this.goalPitch = this.clampPitch(pitch);
+  }
+
   /** Snap all damped values to their goals (used by tests for stable projections). */
   settle(): void {
     this.target.copy(this.goalTarget);

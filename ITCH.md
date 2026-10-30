@@ -18,12 +18,12 @@ Every voyage starts on a fresh, procedurally generated low-poly island: sandy be
 
 - **Houses** like company. **Markets** love Houses, but hate rival Markets.
 - **Lumber camps** clear the forest for points; **Sawmills** want camps nearby, and Houses don't want Sawmills.
-- **Fishers** cluster at the shore near shoals. **Farms** need flat meadows and dislike salt air.
+- **Fishers** stand on stilts in the shallows next to shoals of fish; the tide can't sink them, and the fish follow the shallows as the sea rises. **Farms** need flat meadows and dislike salt air.
 - **Lighthouses** stand on coastal cliffs and count every building in sight. **Shrines** want the highest ground. **Monuments** reward variety.
 
 Cross a score threshold and choose one of two new building packs. Reach the voyage mark and, when your hand runs out, set sail for a bigger island, keeping your score.
 
-**But the sea is rising.** Every six placements the tide climbs a step. Ground that will flood next shimmers, and anything caught below the waterline sinks and costs you points. Build high, gamble on the beach, or raise a **Seawall** to hold back the next rise.
+**But the sea is rising.** Every six placements the tide climbs a step. Ground that will flood next shimmers, and anything caught below the waterline sinks and costs you points. Build high, gamble on the beach, or raise a **Seawall** on the shore to hold back the next rise.
 
 ### Features
 - Endless seeded islands, plus a **daily island** that is the same for everyone each day
@@ -46,7 +46,8 @@ Desktop browser with mouse and keyboard recommended.
 - Upload `tidebound-itch.zip` (made by `npm run package`), tick "This file will be played in the browser"
 - Viewport: 1280 x 720, tick "Fullscreen button"; "Mobile friendly" off
 - Screenshots: `screenshots/1-title.png` to `screenshots/5-summary.png` (made by `npm run screenshots` against a running dev or preview server)
-- Cover image suggestion: crop of `screenshots/4-photo.png` (630 x 500)
+- Cover image: `screenshots/cover.png` (630 x 500 ratio, rendered at 2x = 1260 x 1000; made by `npm run cover`)
+- Release status: Prototype
 
 ## Credits
 Made with Three.js, TypeScript and Vite. All art and sound are generated in code.
